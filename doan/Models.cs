@@ -32,4 +32,21 @@ namespace doan
         public string Mon { get; set; }
         public double Diem { get; set; }
     }
+
+    public class KhoaModel
+    {
+        public string MaKhoa { get; set; }
+        public string TenKhoa { get; set; }
+
+        // Để hiển thị trong ComboBox đẹp hơn
+        public override string ToString() { return TenKhoa; }
+    }
+
+    public class TaiKhoan
+    {
+        public string TenDangNhap { get; set; }
+        public string MatKhau { get; set; }
+        public string HoTen { get; set; }
+        public string Quyen { get; set; } // "Admin" hoặc "SinhVien"
+    }
 }

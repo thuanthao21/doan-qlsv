@@ -1,6 +1,6 @@
 ﻿namespace doan
 {
-    partial class UC_DiemSo
+    partial class UC_Khoa
     {
         /// <summary> 
         /// Required designer variable.
@@ -28,17 +28,8 @@
         /// </summary>
         private void InitializeComponent()
         {
-            // Vì chúng ta đã khởi tạo toàn bộ giao diện trong file UC_DiemSo.cs (hàm InitCustomControls)
-            // Nên file Designer này chỉ cần thiết lập khung cơ bản.
-            this.SuspendLayout();
-            // 
-            // UC_DiemSo
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
+            components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.Name = "UC_DiemSo";
-            this.Size = new System.Drawing.Size(900, 600);
-            this.ResumeLayout(false);
         }
 
         #endregion

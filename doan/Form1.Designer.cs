@@ -148,7 +148,7 @@
             Name = "Form1";
             StartPosition = FormStartPosition.CenterParent;
             Text = "Quản lý Sinh viên";
-            Load += Form1_Load;
+            
             PanelMenu.ResumeLayout(false);
             PanelHeader.ResumeLayout(false);
             PanelHeader.PerformLayout();

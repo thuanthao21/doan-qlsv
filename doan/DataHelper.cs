@@ -1,89 +1,90 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Unicode;
+using System.Windows.Forms;
 
 namespace doan
 {
     public static class DataHelper
     {
-        private static string fileSV = "sinhvien.txt";
-        private static string fileLop = "lophoc.txt";
-        private static string fileDiem = "diem.txt";
+        // Danh sách các file JSON lưu dữ liệu
+        private static string fileSV = "sinhvien.json";
+        private static string fileLop = "lophoc.json";
+        private static string fileDiem = "diem.json";
+        private static string fileKhoa = "khoa.json";
+        private static string fileTaiKhoan = "taikhoan.json"; // [MỚI] File lưu tài khoản
 
-        static DataHelper()
+        // Cấu hình JSON: Hỗ trợ tiếng Việt và định dạng đẹp
+        private static JsonSerializerOptions options = new JsonSerializerOptions
         {
-            if (!File.Exists(fileSV)) File.Create(fileSV).Close();
-            if (!File.Exists(fileLop)) File.Create(fileLop).Close();
-            if (!File.Exists(fileDiem)) File.Create(fileDiem).Close();
-        }
+            Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+            WriteIndented = true
+        };
 
-        private static string Sanitize(string input) { return input == null ? "" : input.Replace("|", "-"); }
-
-        // SINH VIÊN (Cập nhật thêm ảnh)
-        public static void LuuSV(List<SinhVien> ds)
+        // --- HÀM GỐC (GENERIC) ---
+        public static void LuuFile<T>(string fileName, List<T> data)
         {
-            // Thêm cột AnhDaiDien vào cuối
-            var lines = ds.Select(s => $"{Sanitize(s.MaSV)}|{Sanitize(s.HoTen)}|{Sanitize(s.Email)}|{Sanitize(s.SoDienThoai)}|{s.NgaySinh}|{s.GioiTinh}|{Sanitize(s.Lop)}|{Sanitize(s.AnhDaiDien)}");
-            File.WriteAllLines(fileSV, lines, Encoding.UTF8);
-        }
-
-        public static List<SinhVien> DocSV()
-        {
-            if (!File.Exists(fileSV)) return new List<SinhVien>();
-            var list = new List<SinhVien>();
-            foreach (var line in File.ReadAllLines(fileSV))
+            try
             {
-                var p = line.Split('|');
-                // Kiểm tra nếu dòng có đủ 8 cột (dữ liệu mới) hoặc 7 cột (dữ liệu cũ)
-                if (p.Length >= 7)
-                {
-                    list.Add(new SinhVien
-                    {
-                        MaSV = p[0],
-                        HoTen = p[1],
-                        Email = p[2],
-                        SoDienThoai = p[3],
-                        NgaySinh = p[4],
-                        GioiTinh = p[5],
-                        Lop = p[6],
-                        // Nếu file cũ chưa có cột 8 thì để trống ảnh
-                        AnhDaiDien = p.Length > 7 ? p[7] : ""
-                    });
-                }
+                string jsonString = JsonSerializer.Serialize(data, options);
+                File.WriteAllText(fileName, jsonString);
             }
-            return list;
-        }
-
-        // LỚP HỌC (Giữ nguyên)
-        public static void LuuLop(List<LopHocModel> ds)
-        {
-            var lines = ds.Select(l => $"{Sanitize(l.MaLop)}|{Sanitize(l.TenLop)}|{Sanitize(l.Khoa)}");
-            File.WriteAllLines(fileLop, lines, Encoding.UTF8);
-        }
-        public static List<LopHocModel> DocLop()
-        {
-            if (!File.Exists(fileLop)) return new List<LopHocModel>();
-            return File.ReadAllLines(fileLop).Select(l => l.Split('|')).Where(p => p.Length >= 3)
-                .Select(p => new LopHocModel { MaLop = p[0], TenLop = p[1], Khoa = p[2] }).ToList();
-        }
-
-        // ĐIỂM SỐ (Giữ nguyên)
-        public static void LuuDiem(List<DiemModel> ds)
-        {
-            var lines = ds.Select(d => $"{Sanitize(d.MaSV)}|{Sanitize(d.TenSV)}|{Sanitize(d.Mon)}|{d.Diem}");
-            File.WriteAllLines(fileDiem, lines, Encoding.UTF8);
-        }
-        public static List<DiemModel> DocDiem()
-        {
-            if (!File.Exists(fileDiem)) return new List<DiemModel>();
-            var list = new List<DiemModel>();
-            foreach (var line in File.ReadAllLines(fileDiem))
+            catch (Exception ex)
             {
-                var p = line.Split('|');
-                if (p.Length >= 4 && double.TryParse(p[3], out double d))
-                    list.Add(new DiemModel { MaSV = p[0], TenSV = p[1], Mon = p[2], Diem = d });
+                MessageBox.Show($"Lỗi ghi file {fileName}: {ex.Message}");
+            }
+        }
+
+        public static List<T> DocFile<T>(string fileName)
+        {
+            try
+            {
+                if (!File.Exists(fileName)) return new List<T>();
+                string jsonString = File.ReadAllText(fileName);
+                return JsonSerializer.Deserialize<List<T>>(jsonString) ?? new List<T>();
+            }
+            catch
+            {
+                return new List<T>();
+            }
+        }
+
+        // --- CÁC HÀM XỬ LÝ DỮ LIỆU CỤ THỂ ---
+
+        // 1. Sinh Viên
+        public static void LuuSV(List<SinhVien> ds) => LuuFile(fileSV, ds);
+        public static List<SinhVien> DocSV() => DocFile<SinhVien>(fileSV);
+
+        // 2. Lớp Học
+        public static void LuuLop(List<LopHocModel> ds) => LuuFile(fileLop, ds);
+        public static List<LopHocModel> DocLop() => DocFile<LopHocModel>(fileLop);
+
+        // 3. Khoa
+        public static void LuuKhoa(List<KhoaModel> ds) => LuuFile(fileKhoa, ds);
+        public static List<KhoaModel> DocKhoa() => DocFile<KhoaModel>(fileKhoa);
+
+        // 4. Điểm Số
+        public static void LuuDiem(List<DiemModel> ds) => LuuFile(fileDiem, ds);
+        public static List<DiemModel> DocDiem() => DocFile<DiemModel>(fileDiem);
+
+        // 5. [MỚI] Tài Khoản (Đăng nhập/Đăng ký)
+        public static void LuuTaiKhoan(List<TaiKhoan> ds) => LuuFile(fileTaiKhoan, ds);
+
+        public static List<TaiKhoan> DocTaiKhoan()
+        {
+            var list = DocFile<TaiKhoan>(fileTaiKhoan);
+
+            // [TỰ ĐỘNG TẠO] Nếu chưa có tài khoản nào, tạo mặc định để test
+            if (list.Count == 0)
+            {
+                list.Add(new TaiKhoan { TenDangNhap = "admin", MatKhau = "123", HoTen = "Quản Trị Viên", Quyen = "Admin" });
+                list.Add(new TaiKhoan { TenDangNhap = "sv", MatKhau = "1", HoTen = "Sinh Viên Test", Quyen = "SinhVien" });
+
+                // Lưu ngay xuống file để lần sau không tạo lại nữa
+                LuuTaiKhoan(list);
             }
             return list;
         }
