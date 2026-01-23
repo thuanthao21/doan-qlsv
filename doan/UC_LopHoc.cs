@@ -1,44 +1,38 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Microsoft.Data.SqlClient;
 
 namespace doan
 {
     public partial class UC_LopHoc : UserControl
     {
         private List<LopHocModel> danhSachLop = new List<LopHocModel>();
-
-        // Khai báo ErrorProvider để báo lỗi nhập liệu chuyên nghiệp
         private ErrorProvider errorProvider = new ErrorProvider();
 
         public UC_LopHoc()
         {
             InitializeComponent();
 
-            // 1. Sắp xếp giao diện & Nút bấm
             ApplyModernLayout();
-
-            // 2. Tạo cột bảng (chỉ 1 lần để không bị nháy)
             InitTableColumns();
 
-            // 3. Load dữ liệu
             this.Load += (s, e) => {
                 LoadData();
                 LoadComboBoxKhoa();
             };
 
-            // 4. Đăng ký sự kiện
             RegisterEvents();
         }
 
-        // --- 1. GIAO DIỆN (Đã fix lỗi nút bị che) ---
+        // --- 1. GIAO DIỆN ---
         private void ApplyModernLayout()
         {
             UIHelper.Beautify(this);
 
-            // [QUAN TRỌNG] Lôi nút ra khỏi GroupBox để không bị che
             if (gbThongTin.Controls.Contains(btnThem)) gbThongTin.Controls.Remove(btnThem);
             if (gbThongTin.Controls.Contains(btnSua)) gbThongTin.Controls.Remove(btnSua);
             if (gbThongTin.Controls.Contains(btnXoa)) gbThongTin.Controls.Remove(btnXoa);
@@ -49,22 +43,18 @@ namespace doan
             this.Controls.Add(btnXoa);
             this.Controls.Add(btnLamMoi);
 
-            // Đưa nút lên trên cùng
             btnThem.BringToFront(); btnSua.BringToFront(); btnXoa.BringToFront(); btnLamMoi.BringToFront();
 
-            // Style nút
             UIHelper.StyleButton(btnThem, UIHelper.SuccessColor);
             UIHelper.StyleButton(btnSua, UIHelper.WarningColor);
             UIHelper.StyleButton(btnXoa, UIHelper.DangerColor);
             UIHelper.StyleButton(btnLamMoi, UIHelper.InfoColor);
 
-            // GroupBox
-            gbThongTin.Text = "THÔNG TIN LỚP HỌC";
+            gbThongTin.Text = "QUẢN LÝ LỚP HỌC";
             gbThongTin.Dock = DockStyle.Top;
             gbThongTin.Height = 200;
             gbThongTin.BackColor = UIHelper.White;
 
-            // Căn chỉnh ô nhập liệu
             int col1_L = 50, col1_I = 150;
             int col2_L = 450, col2_I = 550;
             int row1 = 50, row2 = 100;
@@ -79,7 +69,6 @@ namespace doan
             lblTenLop.Location = new Point(col1_L, row2);
             txtTenLop.Location = new Point(col1_I, row2 - 5); txtTenLop.Size = new Size(650, inputH);
 
-            // Vị trí nút nằm dưới GroupBox
             int btnY = gbThongTin.Height + 15;
             int btnStartX = (this.Width - (4 * 110 + 3 * 20)) / 2;
 
@@ -88,35 +77,37 @@ namespace doan
             btnXoa.Location = new Point(btnSua.Right + 20, btnY);
             btnLamMoi.Location = new Point(btnXoa.Right + 20, btnY);
 
-            // [FIX] Tắt Dock Fill của bảng để không đè lên nút
             dgvLopHoc.Dock = DockStyle.None;
             dgvLopHoc.Location = new Point(0, btnY + 50);
             dgvLopHoc.Size = new Size(this.Width, this.Height - dgvLopHoc.Top);
             dgvLopHoc.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
         }
 
-        // --- 2. DỮ LIỆU (Dùng BindingSource chống lỗi Index -1) ---
+        // --- 2. DỮ LIỆU ---
         private void InitTableColumns()
         {
             dgvLopHoc.AutoGenerateColumns = false;
             dgvLopHoc.Columns.Clear();
             AddTextColumn("MaLop", "Mã Lớp", "MaLop", 150);
             AddTextColumn("TenLop", "Tên Lớp", "TenLop", 250);
-            AddTextColumn("Khoa", "Khoa", "Khoa", 200);
+            AddTextColumn("MaKhoa", "Mã Khoa", "MaKhoa", 200); // Đã đổi thành MaKhoa
         }
 
         private void AddTextColumn(string name, string header, string prop, int width)
         {
-            var col = new DataGridViewTextBoxColumn { Name = name, HeaderText = header, DataPropertyName = prop, Width = width };
-            dgvLopHoc.Columns.Add(col);
+            dgvLopHoc.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = name,
+                HeaderText = header,
+                DataPropertyName = prop,
+                Width = width
+            });
         }
 
         private void LoadData()
         {
             danhSachLop = DataHelper.DocLop();
-            // Dùng BindingSource làm trung gian an toàn
-            var bindingSource = new BindingSource();
-            bindingSource.DataSource = danhSachLop;
+            var bindingSource = new BindingSource { DataSource = danhSachLop };
             dgvLopHoc.DataSource = bindingSource;
         }
 
@@ -126,90 +117,92 @@ namespace doan
             {
                 var dsKhoa = DataHelper.DocKhoa();
                 cbKhoa.DataSource = dsKhoa;
-                cbKhoa.DisplayMember = "TenKhoa";
-                cbKhoa.ValueMember = "TenKhoa";
+                cbKhoa.DisplayMember = "TenKhoa";  // Hiển thị tên khoa
+                cbKhoa.ValueMember = "MaKhoa";    // Giá trị thực tế là mã khoa
                 cbKhoa.SelectedIndex = -1;
             }
             catch { }
         }
 
-        // --- 3. SỰ KIỆN & NGHIỆP VỤ ---
         private void RegisterEvents()
         {
             btnThem.Click -= BtnThem_Click; btnThem.Click += BtnThem_Click;
             btnSua.Click -= BtnSua_Click; btnSua.Click += BtnSua_Click;
             btnXoa.Click -= BtnXoa_Click; btnXoa.Click += BtnXoa_Click;
-            btnLamMoi.Click -= LamMoi_Click; btnLamMoi.Click += LamMoi_Click;
+            btnLamMoi.Click -= (s, e) => LamMoiForm();
             dgvLopHoc.CellClick -= DgvLopHoc_CellClick; dgvLopHoc.CellClick += DgvLopHoc_CellClick;
         }
 
+        // --- 3. LOGIC NGHIỆP VỤ (ADO.NET) ---
         private void BtnThem_Click(object sender, EventArgs e)
         {
             errorProvider.Clear();
-            bool isValid = true;
+            if (string.IsNullOrWhiteSpace(txtMaLop.Text)) { errorProvider.SetError(txtMaLop, "Nhập mã lớp!"); return; }
+            if (string.IsNullOrWhiteSpace(txtTenLop.Text)) { errorProvider.SetError(txtTenLop, "Nhập tên lớp!"); return; }
+            if (cbKhoa.SelectedValue == null) { errorProvider.SetError(cbKhoa, "Chọn khoa!"); return; }
 
-            // Bắt lỗi nhập liệu
-            if (string.IsNullOrWhiteSpace(txtMaLop.Text)) { errorProvider.SetError(txtMaLop, "Nhập mã lớp!"); isValid = false; }
-            if (string.IsNullOrWhiteSpace(txtTenLop.Text)) { errorProvider.SetError(txtTenLop, "Nhập tên lớp!"); isValid = false; }
-            if (cbKhoa.SelectedIndex < 0 && string.IsNullOrWhiteSpace(cbKhoa.Text)) { errorProvider.SetError(cbKhoa, "Chọn khoa!"); isValid = false; }
-
-            if (!isValid) return;
-
-            // Kiểm tra trùng
             if (danhSachLop.Any(x => x.MaLop.ToLower() == txtMaLop.Text.Trim().ToLower()))
             {
-                MessageBox.Show("Mã lớp đã tồn tại!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Mã lớp đã tồn tại!", "Lỗi");
                 return;
             }
 
-            // Thêm mới
-            danhSachLop.Add(new LopHocModel
-            {
-                MaLop = txtMaLop.Text.Trim(),
-                TenLop = txtTenLop.Text.Trim(),
-                Khoa = cbKhoa.Text
-            });
+            string sql = "INSERT INTO LopHoc (MaLop, TenLop, MaKhoa) VALUES (@ma, @ten, @khoa)";
+            SqlParameter[] paras = {
+                new SqlParameter("@ma", txtMaLop.Text.Trim()),
+                new SqlParameter("@ten", txtTenLop.Text.Trim()),
+                new SqlParameter("@khoa", cbKhoa.SelectedValue.ToString())
+            };
 
-            DataHelper.LuuLop(danhSachLop);
-            LoadData();
-            LamMoiForm();
-            MessageBox.Show("Thêm thành công!");
+            if (DataHelper.ThựcThi(sql, paras))
+            {
+                MessageBox.Show("Thêm lớp học thành công!");
+                LoadData();
+                LamMoiForm();
+            }
         }
 
         private void BtnSua_Click(object sender, EventArgs e)
         {
             if (txtMaLop.Enabled) { MessageBox.Show("Chọn lớp cần sửa!"); return; }
 
-            var item = danhSachLop.FirstOrDefault(x => x.MaLop == txtMaLop.Text);
-            if (item != null)
+            string sql = "UPDATE LopHoc SET TenLop = @ten, MaKhoa = @khoa WHERE MaLop = @ma";
+            SqlParameter[] paras = {
+                new SqlParameter("@ten", txtTenLop.Text.Trim()),
+                new SqlParameter("@khoa", cbKhoa.SelectedValue.ToString()),
+                new SqlParameter("@ma", txtMaLop.Text.Trim())
+            };
+
+            if (DataHelper.ThựcThi(sql, paras))
             {
-                item.TenLop = txtTenLop.Text;
-                item.Khoa = cbKhoa.Text;
-                DataHelper.LuuLop(danhSachLop);
+                MessageBox.Show("Cập nhật thông tin thành công!");
                 LoadData();
-                MessageBox.Show("Cập nhật xong!");
                 LamMoiForm();
             }
         }
 
         private void BtnXoa_Click(object sender, EventArgs e)
         {
-            var item = danhSachLop.FirstOrDefault(x => x.MaLop == txtMaLop.Text);
-            if (item == null) return;
+            if (txtMaLop.Enabled) return;
 
-            // Ràng buộc dữ liệu: Không xóa lớp nếu có sinh viên
-            if (DataHelper.DocSV().Any(sv => sv.Lop == item.TenLop))
+            // KIỂM TRA RÀNG BUỘC: Không cho xóa nếu lớp đang có sinh viên
+            var dsSV = DataHelper.DocSV();
+            if (dsSV.Any(sv => sv.Lop == txtMaLop.Text)) // Check theo mã lớp
             {
-                MessageBox.Show($"Lớp '{item.TenLop}' đang có sinh viên.\nKhông thể xóa!", "Cấm xóa", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                MessageBox.Show("Lớp này đang có sinh viên học, không thể xóa!", "Ràng buộc dữ liệu", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 return;
             }
 
-            if (MessageBox.Show("Xóa lớp này?", "Xác nhận", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            if (MessageBox.Show("Xóa lớp học này khỏi Database?", "Xác nhận", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                danhSachLop.Remove(item);
-                DataHelper.LuuLop(danhSachLop);
-                LoadData();
-                LamMoiForm();
+                string sql = "DELETE FROM LopHoc WHERE MaLop = @ma";
+                SqlParameter[] paras = { new SqlParameter("@ma", txtMaLop.Text.Trim()) };
+
+                if (DataHelper.ThựcThi(sql, paras))
+                {
+                    LoadData();
+                    LamMoiForm();
+                }
             }
         }
 
@@ -219,16 +212,15 @@ namespace doan
             {
                 var row = dgvLopHoc.Rows[e.RowIndex].DataBoundItem as LopHocModel;
                 if (row == null) return;
+
                 txtMaLop.Text = row.MaLop;
                 txtTenLop.Text = row.TenLop;
-                cbKhoa.Text = row.Khoa;
+                cbKhoa.SelectedValue = row.MaKhoa;
 
-                txtMaLop.Enabled = false; // Khóa mã
+                txtMaLop.Enabled = false;
                 errorProvider.Clear();
             }
         }
-
-        private void LamMoi_Click(object sender, EventArgs e) => LamMoiForm();
 
         private void LamMoiForm()
         {

@@ -6,90 +6,126 @@ namespace doan
 {
     public partial class Form1 : Form
     {
-        // Khai báo nút Khoa (nếu chưa có trong Designer)
+        // Khai báo các nút khởi tạo thêm bằng code
         private Button btnKhoa;
+        private Button btnMonHoc;
+        private Button btnQuanLyTK; // Nút mới thay cho chức năng đăng ký tự do
+        private Button btnLogout;
 
         public Form1()
         {
             InitializeComponent();
-            InitButtonKhoa();  // Tạo nút Khoa bằng code
-            SetupDashboard();
+            InitAdditionalButtons(); // Khởi tạo các nút chức năng bổ sung
+            SetupDashboard();        // Cấu hình giao diện tổng thể
 
-            // SỰ KIỆN QUAN TRỌNG: Phân quyền khi form vừa hiện lên
+            // SỰ KIỆN LOAD: Thực hiện phân quyền ngay khi mở Form
             this.Load += (s, e) => PhanQuyenNguoiDung();
         }
 
-        private void InitButtonKhoa()
+        private void InitAdditionalButtons()
         {
-            // Kiểm tra xem trong PanelMenu đã có nút btnKhoa chưa
+            // --- 1. KHỞI TẠO NÚT QUẢN LÝ KHOA ---
             if (!PanelMenu.Controls.ContainsKey("btnKhoa"))
             {
-                btnKhoa = new Button();
-                btnKhoa.Name = "btnKhoa";
-                btnKhoa.Text = "Quản lý Khoa";
-
+                btnKhoa = new Button { Name = "btnKhoa", Text = "Quản lý Khoa" };
                 PanelMenu.Controls.Add(btnKhoa);
-                btnKhoa.Dock = DockStyle.Top; // Xếp chồng từ trên xuống
-
-                // Đảo thứ tự để nút Khoa nằm đúng vị trí mong muốn
-                btnDiemSo.SendToBack();
-                btnLopHoc.SendToBack();
-                btnKhoa.SendToBack();
-                btnSinhVien.SendToBack();
+                btnKhoa.Dock = DockStyle.Top;
             }
             else
             {
                 btnKhoa = (Button)PanelMenu.Controls["btnKhoa"];
             }
-
-            // Gán sự kiện click cho nút Khoa
             btnKhoa.Click += (s, e) => LoadUserControl(new UC_Khoa(), btnKhoa);
+
+            // --- 2. KHỞI TẠO NÚT QUẢN LÝ MÔN HỌC ---
+            if (!PanelMenu.Controls.ContainsKey("btnMonHoc"))
+            {
+                btnMonHoc = new Button { Name = "btnMonHoc", Text = "Quản lý Môn học" };
+                PanelMenu.Controls.Add(btnMonHoc);
+                btnMonHoc.Dock = DockStyle.Top;
+            }
+            else
+            {
+                btnMonHoc = (Button)PanelMenu.Controls["btnMonHoc"];
+            }
+            btnMonHoc.Click += (s, e) => LoadUserControl(new UC_MonHoc(), btnMonHoc);
+
+            // --- 3. KHỞI TẠO NÚT QUẢN LÝ TÀI KHOẢN (THAY CHO ĐĂNG KÝ) ---
+            btnQuanLyTK = new Button { Name = "btnQuanLyTK", Text = "Quản lý Tài khoản" };
+            PanelMenu.Controls.Add(btnQuanLyTK);
+            btnQuanLyTK.Dock = DockStyle.Top;
+            btnQuanLyTK.Click += (s, e) => LoadUserControl(new UC_QuanLyTaiKhoan(), btnQuanLyTK);
+
+            // --- 4. KHỞI TẠO NÚT ĐĂNG XUẤT ---
+            btnLogout = new Button
+            {
+                Name = "btnLogout",
+                Text = "Đăng xuất",
+                Dock = DockStyle.Bottom, // Luôn nằm ở đáy menu
+                Height = 55
+            };
+            PanelMenu.Controls.Add(btnLogout);
+            btnLogout.Click += BtnLogout_Click;
+
+            // Sắp xếp thứ tự hiển thị nút từ trên xuống dưới: SV -> TK -> Khoa -> Môn -> Lớp -> Điểm
+            btnDiemSo.SendToBack();
+            btnLopHoc.SendToBack();
+            btnMonHoc.SendToBack();
+            btnKhoa.SendToBack();
+            btnQuanLyTK.SendToBack();
+            btnSinhVien.SendToBack();
         }
 
-        // --- HÀM PHÂN QUYỀN (MỚI) ---
         private void PhanQuyenNguoiDung()
         {
-            // 1. Hiển thị lời chào
-            string role = UserSession.QuyenHan == "Admin" ? "Quản Trị Viên" : "Sinh Viên";
-            this.Text = $"HỆ THỐNG QUẢN LÝ ĐÀO TẠO - Xin chào: {UserSession.TenHienThi} ({role})";
+            // Hiển thị lời chào dựa trên Session đăng nhập
+            string roleName = UserSession.IsAdmin() ? "Quản Trị Viên" : "Sinh Viên";
+            this.Text = $"HỆ THỐNG QUẢN LÝ ĐÀO TẠO - [ {UserSession.TenHienThi} | {roleName} ]";
 
-            // 2. Nếu là Sinh Viên -> Ẩn các nút quản lý
-            if (UserSession.QuyenHan != "Admin")
+            if (!UserSession.IsAdmin())
             {
+                // Nếu là Sinh viên: Ẩn TOÀN BỘ chức năng quản lý
                 if (btnSinhVien != null) btnSinhVien.Visible = false;
-                if (btnLopHoc != null) btnLopHoc.Visible = false;
                 if (btnKhoa != null) btnKhoa.Visible = false;
+                if (btnMonHoc != null) btnMonHoc.Visible = false;
+                if (btnLopHoc != null) btnLopHoc.Visible = false;
+                if (btnQuanLyTK != null) btnQuanLyTK.Visible = false;
 
-                // Mặc định nhảy vào trang Điểm số (trang duy nhất họ được xem)
+                // Tự động mở trang xem điểm duy nhất cho sinh viên
                 LoadUserControl(new UC_DiemSo(), btnDiemSo);
             }
             else
             {
-                // Nếu là Admin -> Mặc định vào trang Sinh Viên
+                // Nếu là Admin: Mặc định mở trang quản lý Sinh viên
                 LoadUserControl(new UC_SinhVien(), btnSinhVien);
             }
         }
 
         private void SetupDashboard()
         {
-            this.Size = new Size(1200, 768);
+            this.Size = new Size(1300, 850);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = UIHelper.LightGray;
 
             PanelMenu.BackColor = UIHelper.DarkBlue;
-            PanelMenu.Width = 220;
+            PanelMenu.Width = 230;
 
             PanelHeader.BackColor = UIHelper.White;
-            PanelHeader.Height = 60;
+            PanelHeader.Height = 65;
             label1.ForeColor = UIHelper.DarkBlue;
             label1.Font = UIHelper.HeaderFont;
-            label1.Text = "TỔNG QUAN";
+            label1.Text = "HỆ THỐNG QUẢN LÝ";
 
-            // Style nút menu
+            // Áp dụng Style đồng bộ cho tất cả các nút Sidebar
             StyleSideButton(btnSinhVien);
+            StyleSideButton(btnQuanLyTK);
+            StyleSideButton(btnKhoa);
+            StyleSideButton(btnMonHoc);
             StyleSideButton(btnLopHoc);
             StyleSideButton(btnDiemSo);
-            StyleSideButton(btnKhoa);
+            StyleSideButton(btnLogout);
+
+            btnLogout.ForeColor = Color.FromArgb(255, 150, 150); // Màu đỏ nhạt cho Đăng xuất
 
             panelMain.BackColor = UIHelper.LightGray;
             panelMain.Padding = new Padding(20);
@@ -101,24 +137,28 @@ namespace doan
             btn.FlatStyle = FlatStyle.Flat;
             btn.FlatAppearance.BorderSize = 0;
             btn.BackColor = UIHelper.DarkBlue;
-            btn.ForeColor = Color.FromArgb(180, 180, 180);
+            btn.ForeColor = Color.FromArgb(190, 190, 190);
             btn.Font = UIHelper.RegularFont;
             btn.TextAlign = ContentAlignment.MiddleLeft;
-            btn.Padding = new Padding(25, 0, 0, 0);
-            btn.Height = 55;
+            btn.Padding = new Padding(30, 0, 0, 0);
+            btn.Height = 60;
             btn.Cursor = Cursors.Hand;
             btn.Dock = DockStyle.Top;
 
             btn.MouseEnter += (s, e) => { if (btn.Tag == null) btn.ForeColor = UIHelper.White; };
-            btn.MouseLeave += (s, e) => { if (btn.Tag == null) btn.ForeColor = Color.FromArgb(180, 180, 180); };
+            btn.MouseLeave += (s, e) => { if (btn.Tag == null) btn.ForeColor = Color.FromArgb(190, 190, 190); };
         }
 
         private void LoadUserControl(UserControl uc, Button activeBtn)
         {
+            // Reset trạng thái tất cả các nút
             ResetButton(btnSinhVien);
+            ResetButton(btnQuanLyTK);
+            ResetButton(btnKhoa);
+            ResetButton(btnMonHoc);
             ResetButton(btnLopHoc);
             ResetButton(btnDiemSo);
-            ResetButton(btnKhoa);
+            ResetButton(btnLogout);
 
             if (activeBtn != null)
             {
@@ -137,11 +177,27 @@ namespace doan
         {
             if (btn == null) return;
             btn.BackColor = UIHelper.DarkBlue;
-            btn.ForeColor = Color.FromArgb(180, 180, 180);
+            btn.ForeColor = Color.FromArgb(190, 190, 190);
             btn.Tag = null;
         }
 
-        // Các sự kiện click có sẵn từ Designer
+        private void BtnLogout_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("Bạn chắc chắn muốn đăng xuất?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                UserSession.LogOut();
+                this.Hide();
+                FrmLogin loginForm = new FrmLogin();
+                if (loginForm.ShowDialog() == DialogResult.OK)
+                {
+                    Form1 f1 = new Form1();
+                    f1.Show();
+                    this.Close();
+                }
+                else { Application.Exit(); }
+            }
+        }
+
         private void btnSinhVien_Click(object sender, EventArgs e) => LoadUserControl(new UC_SinhVien(), btnSinhVien);
         private void btnLopHoc_Click(object sender, EventArgs e) => LoadUserControl(new UC_LopHoc(), btnLopHoc);
         private void btnDiemSo_Click(object sender, EventArgs e) => LoadUserControl(new UC_DiemSo(), btnDiemSo);

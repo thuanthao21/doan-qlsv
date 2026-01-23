@@ -8,23 +8,21 @@ namespace doan
         [STAThread]
         static void Main()
         {
-            // [QUAN TRỌNG] Thêm dòng này để fix lỗi mờ giao diện
-            // Lưu ý: Chỉ chạy được trên .NET Core 3.0 trở lên (.NET 5, 6, 7, 8...)
-            Application.SetHighDpiMode(HighDpiMode.SystemAware);
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // --- ĐOẠN LOGIC CŨ CỦA BẠN ---
+            // --- ĐOẠN QUAN TRỌNG NHẤT ---
+            // 1. Chạy Form Đăng nhập trước
             FrmLogin login = new FrmLogin();
 
+            // 2. Chỉ khi đăng nhập thành công (OK) thì mới mở Form1
             if (login.ShowDialog() == DialogResult.OK)
             {
                 Application.Run(new Form1());
             }
             else
             {
-                Application.Exit();
+                Application.Exit(); // Nếu tắt form đăng nhập thì thoát luôn
             }
             // -----------------------------
         }
